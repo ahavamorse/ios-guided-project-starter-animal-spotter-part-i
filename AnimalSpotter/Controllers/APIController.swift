@@ -17,7 +17,13 @@ final class APIController {
     }
     
     enum NetworkError: Error {
-        case noData
+        case badUrl
+        case noAuth
+        case badAuth
+        case otherError
+        case badData
+        case noDecode
+        case badImage
     }
     
     private let baseURL = URL(string: "https://lambdaanimalspotter.vapor.cloud/api")!
@@ -121,8 +127,136 @@ final class APIController {
     }
     
     // create function for fetching all animal names
+    func fetchAllAnimalNames(completion: @escaping (Result<[String], NetworkError>) -> Void) {
+        guard let bearer = bearer else {
+            completion(.failure(.noAuth))
+            return
+        }
+        
+        let allAnimalsUrl = baseURL.appendingPathComponent("animals/all")
+        
+        var request = URLRequest(url: allAnimalsUrl)
+        request.httpMethod = HTTPMethod.get.rawValue
+        // This provides authorization credentials to the server
+        // Data here is case sensitive and you must folloow the rules exactly.
+        request.setValue("Bearer \(bearer.token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            // handle errors (like no internet connectivity,
+            // or anything that generates an Error object)
+            if let error = error {
+                NSLog("Error receiving animal name data: \(error)")
+                completion(.failure(.otherError))
+                return
+            }
+            
+            // Specifically, the bearer token is invalid or expired
+            if let response = response as? HTTPURLResponse,
+                response.statusCode == 401 {
+                completion(.failure(.badAuth))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.badData))
+                return
+            }
+            
+            let decoder = JSONDecoder()
+            do {
+                let animalNames = try decoder.decode([String].self, from: data)
+                completion(.success(animalNames))
+            } catch {
+                NSLog("Error decoding animal objects: \(error)")
+                completion(.failure(.noDecode))
+                return
+            }
+            
+        }.resume()
+    }
     
     // create function for fetching animal details
+    func fetchDetails(for animalName: String, completion: @escaping (Result<Animal, NetworkError>) -> Void) {
+        // If failure, the bearer token doesn't exist
+        guard let bearer = bearer else {
+            completion(.failure(.noAuth))
+            return
+        }
+        
+        let animalUrl = baseURL.appendingPathComponent("animals/\(animalName)")
+        
+        var request = URLRequest(url: animalUrl)
+        request.httpMethod = HTTPMethod.get.rawValue
+        // This provides authorization credentials to the server
+        // Data here is case sensitive and you must folloow the rules exactly.
+        request.setValue("Bearer \(bearer.token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            // handle errors (like no internet connectivity,
+            // or anything that generates an Error object)
+            if let error = error {
+                NSLog("Error receiving animal detail data: \(error)")
+                completion(.failure(.otherError))
+                return
+            }
+            
+            // Specifically, the bearer token is invalid or expired
+            if let response = response as? HTTPURLResponse,
+                response.statusCode == 401 {
+                completion(.failure(.badAuth))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.badData))
+                return
+            }
+            
+            let decoder = JSONDecoder()
+//            decoder.dataDecodingStrategy = .secondsSince1970
+            do {
+                let animal = try decoder.decode(Animal.self, from: data)
+                completion(.success(animal))
+            } catch {
+                NSLog("Error decoding animal object: \(error)")
+                completion(.failure(.noDecode))
+                return
+            }
+            
+        }.resume()
+    }
     
     // create function to fetch image
+    func fetchImage(at urlString: String, completion: @escaping (Result<UIImage, NetworkError>) -> ()) {
+        guard let imageUrl = URL(string: urlString) else {
+            completion(.failure(.badUrl))
+            return
+        }
+        
+        var request = URLRequest(url: imageUrl)
+        request.httpMethod = HTTPMethod.get.rawValue
+        
+        URLSession.shared.dataTask(with: imageUrl) { (data, _, error) in
+            // chck for errors
+            if let error = error {
+                completion(.failure(.otherError))
+                return
+            }
+            
+            // ensuring data was received
+            guard let data = data else {
+                completion(.failure(.badData))
+                return
+            }
+            
+            // turning binary image data into a UIImage object
+            guard let image = UIImage(data: data) else {
+                completion(.failure(.badImage))
+                return
+            }
+            
+            // passing the successful image
+            completion(.success(image))
+        }.resume()
+    }
 }

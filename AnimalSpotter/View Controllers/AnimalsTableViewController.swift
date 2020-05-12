@@ -10,6 +10,16 @@ import UIKit
 
 class AnimalsTableViewController: UITableViewController {
     
+    enum NetworkError: Error {
+        case badUrl
+        case noAuth
+        case badAuth
+        case otherError
+        case badData
+        case noDecode
+        case badImage
+    }
+    
     // MARK: - Properties
     
     let reuseIdentifier = "AnimalCell"
@@ -51,6 +61,44 @@ class AnimalsTableViewController: UITableViewController {
     
     @IBAction func getAnimals(_ sender: UIBarButtonItem) {
         // fetch all animals from API
+        apiController.fetchAllAnimalNames { (result) in
+//            // This treats the throwable method result like an optional
+//            // Success provides an array of Strings, and failure provides a nil value
+//            // (error itself is thrown away)
+//            if let names = try? result.get() {
+//                DispatchQueue.main.async {
+//                    self.animalNames = names
+//                    self.tableView.reloadData()
+//                }
+//            }
+            // This approach lets you handle success
+            // and also enumerate the falilures to present
+            // appropriate and actionable messages to the user
+            do {
+                let names = try result.get()
+                DispatchQueue.main.async {
+                    self.animalNames = names
+                    self.tableView.reloadData()
+                }
+            } catch {
+                if let error = error as? NetworkError {
+                    switch error {
+                    case .noAuth:
+                        NSLog("No bearer token, please log in")
+                    case .badAuth:
+                        NSLog("Bearer token invalid")
+                    case .otherError:
+                        NSLog("Generic network error occurred")
+                    case .badData:
+                        NSLog("Data received was invalid, corrupt, or doesn't exist")
+                    case .noDecode:
+                        NSLog("JSON data could not be decoded")
+                    default:
+                        NSLog("Other error occurred")
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Navigation
@@ -61,6 +109,14 @@ class AnimalsTableViewController: UITableViewController {
             // inject dependencies
             if let loginVC = segue.destination as? LoginViewController {
                 loginVC.apiController = apiController
+            }
+        } else if segue.identifier == "ShowAnimalDetailSegue" {
+            // Inject dependencies
+            if let detailVC = segue.destination as? AnimalDetailViewController {
+                if let indexPath = tableView.indexPathForSelectedRow {
+                    detailVC.animalName = animalNames[indexPath.row]
+                }
+                detailVC.apiController = apiController
             }
         }
     }

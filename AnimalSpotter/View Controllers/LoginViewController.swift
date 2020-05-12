@@ -57,7 +57,7 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
                             alertController.addAction(alertAction)
                             self.present(alertController, animated: true) {
                                 self.loginTypeSegmentedControl.selectedSegmentIndex = 1
-                                self.loginType = .signIn // This is me - what I did by myself without the instructor telling me to
+                                self.loginType = .signIn
                                 self.signInButton.setTitle("Sign In", for: .normal)
                             }
                         }
@@ -68,7 +68,7 @@ class LoginViewController: UIViewController, UITextFieldDelegate {
                 // perform signIn API call
                 apiController.signIn(with: user) { (error) in
                     if let error = error {
-                        NSLog("Error occurred during sign up: \(error)")
+                        NSLog("Error occurred during sign in: \(error)")
                     } else {
                         DispatchQueue.main.async {
                             self.dismiss(animated: true, completion: nil)
