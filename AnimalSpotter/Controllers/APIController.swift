@@ -17,11 +17,13 @@ final class APIController {
     }
     
     enum NetworkError: Error {
+        case badUrl
         case noAuth
         case badAuth
         case otherError
         case badData
         case noDecode
+        case badImage
     }
     
     private let baseURL = URL(string: "https://lambdaanimalspotter.vapor.cloud/api")!
@@ -225,4 +227,36 @@ final class APIController {
     }
     
     // create function to fetch image
+    func fetchImage(at urlString: String, completion: @escaping (Result<UIImage, NetworkError>) -> ()) {
+        guard let imageUrl = URL(string: urlString) else {
+            completion(.failure(.badUrl))
+            return
+        }
+        
+        var request = URLRequest(url: imageUrl)
+        request.httpMethod = HTTPMethod.get.rawValue
+        
+        URLSession.shared.dataTask(with: imageUrl) { (data, _, error) in
+            // chck for errors
+            if let error = error {
+                completion(.failure(.otherError))
+                return
+            }
+            
+            // ensuring data was received
+            guard let data = data else {
+                completion(.failure(.badData))
+                return
+            }
+            
+            // turning binary image data into a UIImage object
+            guard let image = UIImage(data: data) else {
+                completion(.failure(.badImage))
+                return
+            }
+            
+            // passing the successful image
+            completion(.success(image))
+        }.resume()
+    }
 }

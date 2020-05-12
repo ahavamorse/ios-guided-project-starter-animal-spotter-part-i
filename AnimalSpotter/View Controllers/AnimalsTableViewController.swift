@@ -11,11 +11,13 @@ import UIKit
 class AnimalsTableViewController: UITableViewController {
     
     enum NetworkError: Error {
+        case badUrl
         case noAuth
         case badAuth
         case otherError
         case badData
         case noDecode
+        case badImage
     }
     
     // MARK: - Properties
@@ -91,6 +93,8 @@ class AnimalsTableViewController: UITableViewController {
                         NSLog("Data received was invalid, corrupt, or doesn't exist")
                     case .noDecode:
                         NSLog("JSON data could not be decoded")
+                    default:
+                        NSLog("Other error occurred")
                     }
                 }
             }

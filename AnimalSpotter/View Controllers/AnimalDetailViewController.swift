@@ -36,6 +36,14 @@ class AnimalDetailViewController: UIViewController {
                 DispatchQueue.main.async {
                     self.updateViews(with: animal)
                 }
+                
+                apiController.fetchImage(at: animal.imageURL) { (result) in
+                    if let image = try? result.get() {
+                        DispatchQueue.main.async {
+                            self.animalImageView.image = image
+                        }
+                    }
+                }
             }
         }
     }
