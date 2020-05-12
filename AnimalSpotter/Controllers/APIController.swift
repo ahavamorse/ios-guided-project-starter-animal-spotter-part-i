@@ -171,10 +171,58 @@ final class APIController {
             }
             
         }.resume()
-        
     }
     
     // create function for fetching animal details
+    func fetchDetails(for animalName: String, completion: @escaping (Result<Animal, NetworkError>) -> Void) {
+        // If failure, the bearer token doesn't exist
+        guard let bearer = bearer else {
+            completion(.failure(.noAuth))
+            return
+        }
+        
+        let animalUrl = baseURL.appendingPathComponent("animals/\(animalName)")
+        
+        var request = URLRequest(url: animalUrl)
+        request.httpMethod = HTTPMethod.get.rawValue
+        // This provides authorization credentials to the server
+        // Data here is case sensitive and you must folloow the rules exactly.
+        request.setValue("Bearer \(bearer.token)", forHTTPHeaderField: "Authorization")
+        
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+            // handle errors (like no internet connectivity,
+            // or anything that generates an Error object)
+            if let error = error {
+                NSLog("Error receiving animal detail data: \(error)")
+                completion(.failure(.otherError))
+                return
+            }
+            
+            // Specifically, the bearer token is invalid or expired
+            if let response = response as? HTTPURLResponse,
+                response.statusCode == 401 {
+                completion(.failure(.badAuth))
+                return
+            }
+            
+            guard let data = data else {
+                completion(.failure(.badData))
+                return
+            }
+            
+            let decoder = JSONDecoder()
+//            decoder.dataDecodingStrategy = .secondsSince1970
+            do {
+                let animal = try decoder.decode(Animal.self, from: data)
+                completion(.success(animal))
+            } catch {
+                NSLog("Error decoding animal object: \(error)")
+                completion(.failure(.noDecode))
+                return
+            }
+            
+        }.resume()
+    }
     
     // create function to fetch image
 }
